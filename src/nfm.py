@@ -1,7 +1,10 @@
 # Implementation of the multiplicative update rule from Lee and Seung
 
+import random
 import numpy as np
 from typing import Tuple
+import time
+import matplotlib.pyplot as plt
 
 def euclidian_distance(A:np.ndarray, B:np.ndarray)->float:
     return np.sum((A-B)**2)
@@ -19,11 +22,6 @@ def nmf(V:np.ndarray, r:int, iter_max:int, tolerance:float)->Tuple[np.ndarray,np
     W=np.random.rand(n,r)*10
     H=np.random.rand(r,m)*10
 
-    print("V=",V)
-    print("W=",W)
-    print("H=",H)
-    print("WH=",W@H)
-
     
     # We apply the update rule on H and V
     # @ is matrix multiplication, * and / are element wise operations
@@ -37,7 +35,7 @@ def nmf(V:np.ndarray, r:int, iter_max:int, tolerance:float)->Tuple[np.ndarray,np
 
         distance = euclidian_distance(V, W@H)
 
-        print(distance)
+        #print(distance)
 
         if previous_distance-distance<tolerance:
             break
@@ -47,9 +45,35 @@ def nmf(V:np.ndarray, r:int, iter_max:int, tolerance:float)->Tuple[np.ndarray,np
 
     return (W,H)
 
+def nmf_test(nb_tests:int)->list:
+    # test on random matrix    
+
+    time_results=[]
+
+    for iter in range (1, nb_tests):
+
+        V=np.random.rand(iter,iter)*iter
+        (n,m)=V.shape
+        r = random.randint(1,min(n,m))
+
+        start = time.time()
+        nmf(V=V,r=r,iter_max=1000,tolerance=1e-10)
+        end = time.time()
+
+        time_results.append((end-start))
+        print("elapsed time = ",end-start)
+
+    return time_results
 
 
-V=np.random.rand(2,2)*10
+nb_tests=200
 
-nmf(V,1,1000, 1e-50)
+time_results=nmf_test(nb_tests)
+
+fig, ax = plt.subplots()
+ax.set_ylabel("time")
+ax.set_xlabel("size of V")
+ax.set_title("NMF computation time vs matrix size")
+ax.plot(range(1,nb_tests),time_results)
+plt.savefig("../results/time_results.png")
 
