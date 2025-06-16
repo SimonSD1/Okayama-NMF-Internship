@@ -15,9 +15,11 @@ def euclidian_distance(A: np.ndarray, B: np.ndarray) -> float:
     return np.sum((A - B) ** 2)
 
 
-def nmf(
-    V: np.ndarray, r: int, iter_max: int, tolerance: float
-) -> Tuple[np.ndarray, np.ndarray]:
+def nmf(V: np.ndarray, r: int, iter_max: int, tolerance: float) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    float,
+]:
     """
     Take a matrix V of size n by m and r\n
     Return W of size n by r and H of size r by m s.t V=~WH\n
@@ -33,6 +35,7 @@ def nmf(
     # @ is matrix multiplication, * and / are element wise operations
 
     previous_distance = euclidian_distance(V, W @ H)
+    initial_distance = previous_distance
     iter = 0
 
     while iter < iter_max:
@@ -49,11 +52,11 @@ def nmf(
         previous_distance = distance
         iter += 1
 
-    return (W, H)
+    return (W, H, initial_distance)
 
 
-def nmf_test(
-    nb_tests: int, iter_max: int, tolerance: float
+def nmf_test_against_sclearn(
+    nb_tests_against_sclearn: int, iter_max: int, tolerance: float
 ) -> Tuple[list, list, list, list]:
     # test on random matrix
 
@@ -63,7 +66,7 @@ def nmf_test(
     distance_results_implem = []
     distance_results_sklearn = []
 
-    for iter in range(1, nb_tests):
+    for iter in range(1, nb_tests_against_sclearn):
 
         V = np.random.rand(iter, iter) * iter
         (n, m) = V.shape
@@ -71,7 +74,7 @@ def nmf_test(
         r = random.randint(1, min(n, m))
 
         start = time.time()
-        W, H = nmf(V=V, r=r, iter_max=iter_max, tolerance=tolerance)
+        W, H, _ = nmf(V=V, r=r, iter_max=iter_max, tolerance=tolerance)
         end = time.time()
         time_results_implem.append((end - start))
         distance_results_implem.append(euclidian_distance(V, W @ H))
@@ -93,16 +96,44 @@ def nmf_test(
     )
 
 
-nb_tests = 100
+def test_previous_distance(nb_tests_initial_final: int, iter_max: int, tolerance: float) -> Tuple[list, list]:
+
+    distance_results_implem = []
+
+    initial_distances = []
+
+    for iter in range(1, nb_tests_initial_final):
+
+        V = np.random.rand(iter, iter) * iter
+        (n, m) = V.shape
+
+        r = random.randint(1, min(n, m))
+
+        W, H, initial_distance = nmf(V=V, r=r, iter_max=iter_max, tolerance=tolerance)
+        distance_results_implem.append(euclidian_distance(V, W @ H))
+        initial_distances.append(initial_distance)
+
+    return (distance_results_implem, initial_distances)
+
+
+nb_tests_against_sclearn = 100
+nb_tests_initial_final=100
 
 (
     time_results_implem,
     time_results_sklearn,
     distance_results_implem,
     distance_results_sklearn,
-) = nmf_test(nb_tests, 200, 1e-6)
+) = nmf_test_against_sclearn(nb_tests_against_sclearn, 200, 1e-6)
 
-x = range(1, nb_tests)
+nb_tests_initial_distance = 100
+
+(final_distance, initial_distances) = test_previous_distance(
+    nb_tests_initial_final, 200, 1e-6
+)
+
+
+x = range(1, nb_tests_against_sclearn)
 
 fig, ax = plt.subplots()
 ax.set_ylabel("time")
@@ -121,3 +152,15 @@ ax.plot(x, distance_results_implem, label="implem")
 ax.plot(x, distance_results_sklearn, label="sklearn")
 plt.legend()
 plt.savefig("../results/distance_results.png")
+
+x = range(1, nb_tests_initial_final)
+
+
+fig, ax = plt.subplots()
+ax.set_ylabel("euclidean distance")
+ax.set_xlabel("size of V")
+ax.set_title("NMF euclidean initial distance vs final distance")
+ax.plot(x, final_distance, label="final")
+ax.plot(x, initial_distances, label="initial")
+plt.legend()
+plt.savefig("../results/initial_final_results.png")
