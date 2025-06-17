@@ -2,7 +2,6 @@ results/
 Session.vim
 
 # for latex
-*.bib
 *.aux
 *.bbl
 *.blg
