@@ -11,7 +11,7 @@ from sklearn import decomposition
 epsilon = 1e-10
 
 
-def banmf(X: np.ndarray, k: int, Niter: int):
+def banmf(X: np.ndarray, k: int, Niter: int) -> Tuple[Tuple[np.ndarray, np.ndarray],list]:
 
     (n, m) = X.shape
 
@@ -23,34 +23,26 @@ def banmf(X: np.ndarray, k: int, Niter: int):
     # Solving the auxiliary problem
     iter = 0
 
+    distances = []
     while iter < Niter:
         W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose() + epsilon))
         H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H + epsilon))
 
         current_result = W @ H
 
-        print(" update Y")
-        print(Y)
-        print("current result")
-        print(current_result)
-
         Y[(current_result < 1) & X] = 1
         Y[(current_result >= 1) & (current_result <= k) & X] = current_result[
             (current_result >= 1) & (current_result <= k) & X
         ]
         Y[(current_result >= k) & X] = k
-        print(Y)
-        print(" ")
         iter += 1
-        print(euclidian_distance(Y, W @ H))
 
+        distances.append(euclidian_distance(Y, W @ H))
+
+    print(distances)
+    print("ok")
     # Booleanization
-
-    print(W)
-
-    print(H)
-
-    return booleanization(X, W, H, 10)
+    return booleanization(X, W, H, 10), distances
 
 
 def booleanization(
@@ -64,6 +56,7 @@ def booleanization(
     min_distance = n * m + 1
     argmin_W = 0
     argmin_H = 0
+    distances_booleanization = []
 
     for delta_W in W_p:
         for delta_H in H_p:
@@ -79,7 +72,6 @@ def booleanization(
                 min_distance = current_distance
                 argmin_W = delta_W
                 argmin_H = delta_H
-            print("iter min")
 
     W_prime = W > argmin_W
     H_prime = H > argmin_H
@@ -95,18 +87,37 @@ def boolean_distance(A: np.ndarray, B: np.ndarray) -> float:
     return np.sum(A != B)
 
 
-def test():
-    # random boolean matrix
-    X = np.random.rand(5, 5) > 0.5
+def banmf_test(nb_tests: int, iter_max: int) -> Tuple[list,list]:
+    # test on random matrix
 
-    W, H = banmf(X, 4, 10)
+    distance_results_implem = []
 
-    print(X)
-    #print(W)
+    convergence=[]
+    for iter in range(0, nb_tests):
 
-    #print(H)
+        X = (np.random.rand(100, 100) * 10 > 0.5).astype(bool)
 
-    print((W @ H).astype(bool))
+        k = random.randint(1, 100)
+
+        ((W, H),convergence) = banmf(X, k, iter_max)
+        distance_results_implem.append(boolean_distance(X, W @ H))
+
+    return distance_results_implem, convergence
 
 
-test()
+nb_tests = 1
+iter_max=200
+distance_result, convergence = banmf_test(nb_tests, iter_max)
+
+
+
+
+x = range(0, iter_max)
+
+fig, ax = plt.subplots()
+ax.set_ylabel("distance")
+ax.set_xlabel("size of X")
+ax.set_title("Convergence")
+ax.plot(x, convergence, label="boolean distance")
+plt.legend()
+plt.savefig("../results/banmf_convergence.png")
