@@ -3,10 +3,11 @@
 
 import random
 import numpy as np
-from typing import Tuple
+from typing import Optional, Tuple
 import time
 import matplotlib.pyplot as plt
 from sklearn import decomposition
+from mpl_toolkits import mplot3d
 
 epsilon = 1e-10
 
@@ -27,7 +28,7 @@ def banmf_initialization(
 
     # Initialization
     Y = X.copy().astype(float)
-    print(m,k)
+    print(m, k)
     W = np.random.rand(n, k) * 100
     H = np.random.rand(k, m) * 100
 
@@ -73,6 +74,7 @@ def booleanization(
 
     return W_prime, H_prime
 
+
 def banmf(X: np.ndarray, k: int, Niter: int) -> Tuple[np.ndarray, np.ndarray]:
 
     Y, W, H = banmf_initialization(X, k)
@@ -81,31 +83,83 @@ def banmf(X: np.ndarray, k: int, Niter: int) -> Tuple[np.ndarray, np.ndarray]:
 
     return booleanization(X, W, H, 10)
 
-def test_nb_point_booleanization(n:int,m:int,nb_tests:int):
-    X=(np.random.rand(n,m)>0.5).astype(bool)
 
-    k=random.randint(1,min(n,m))
+def test_nb_point_booleanization(n: int, m: int, nb_tests: int, plot: bool, k: Optional[int] = None):
+    X = (np.random.rand(n, m) > 0.5).astype(bool)
 
-    Y,W,H=banmf_initialization(X,k)
+    if k is None:
+        k = random.randint(1, min(n, m))
 
-    W,H=banmf_auxiliary_solve(X,Y,W,H,k,200)
+    Y, W, H = banmf_initialization(X, k)
 
-    booleanization_result=[]
-    for npoints in range (1,nb_tests):
-        W_prime,H_prime=booleanization(X,W,H,npoints)
-        booleanization_result.append(boolean_distance(X,W_prime@H_prime))
-    
+    W, H = banmf_auxiliary_solve(X, Y, W, H, k, 200)
+
+    booleanization_result = []
+    for npoints in range(1, nb_tests):
+        W_prime, H_prime = booleanization(X, W, H, npoints)
+        booleanization_result.append(boolean_distance(X, W_prime @ H_prime))
+
+    if plot == True:
+        x = range(1, nb_tests)
+
+        fig, ax = plt.subplots()
+        ax.set_ylabel("final distance")
+        ax.set_xlabel("number of points")
+        ax.set_title(
+            f"Final distance vs number of point in booleanization on a {n} by {m}"
+        )
+        ax.plot(x, booleanization_result, label="final distance")
+        plt.legend()
+        plt.savefig("../results/npoints_booleanization.png")
+
+    return booleanization_result
+
+
+def test_nb_points_3d(nb_tests, plot: bool):
+    # for different matrix sizes
+    result_matrix = []
+
+    for size in range(1, nb_tests):
+        bool_result = test_nb_point_booleanization(size, size, nb_tests, plot=False, k=max(1,int(size/2)))
+        result_matrix.append(
+            bool_result
+        )  # chaque ligne correspond à une taille de matrice
+
+    result_matrix = np.array(result_matrix)
+
+    if plot:
+        #plt.figure(figsize=(10, 8))
+        plt.imshow(
+            result_matrix,
+            origin="lower",
+            extent=(1.0, float(nb_tests - 1), 1.0, float(nb_tests - 1)),
+        )
+        plt.colorbar(label="final boolean distance")
+        plt.xlabel("nb points in booleanization")
+        plt.ylabel("Size of the matrix")
+        plt.title("nb points and size of matrix vs boolean distance (k=size/2)")
+        plt.savefig("../results/3d_booleanization_heatmap.png")
+
+def test_latent_dimension(n: int, m: int, nb_tests: int):
+
+    X = (np.random.rand(n, m) > 0.5).astype(bool)
+
+    results_distance = []
+    for k in range(1, nb_tests):
+        W, H = banmf(X, k, 200)
+        results_distance.append(boolean_distance(X, W @ H))
 
     x = range(1, nb_tests)
 
     fig, ax = plt.subplots()
     ax.set_ylabel("final distance")
-    ax.set_xlabel("number of points")
-    ax.set_title("Final distance vs number of point in booleanization")
-    ax.plot(x, booleanization_result, label="final distance")
+    ax.set_xlabel("latent dimension")
+    ax.set_title(f"final distance vs latent dimension for {n} by {m} matrix")
+    ax.plot(x, results_distance, label="final distance")
     plt.legend()
-    plt.savefig("../results/npoints_booleanization.png")
-    
+    plt.savefig("../results/banmf_latent_dimension.png")
 
 
-test_nb_point_booleanization(50,50,100)
+# test_nb_point_booleanization(50,50,100)
+#test_latent_dimension(50, 50, 100)
+test_nb_points_3d(50,True)
