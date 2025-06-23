@@ -1,0 +1,121 @@
+from banmf import *
+
+
+def test_nb_point_booleanization(
+    n: int, m: int, nb_tests: int, plot: bool, k: Optional[int] = None
+):
+    X = (np.random.rand(n, m) > 0.5).astype(bool)
+
+    if k is None:
+        k = random.randint(1, min(n, m))
+
+    Y, W, H = banmf_initialization(X, k)
+
+    W, H, _ = banmf_auxiliary_solve(X, Y, W, H, k, 200)
+
+    booleanization_result = []
+    for npoints in range(1, nb_tests):
+        W_prime, H_prime = booleanization(X, W, H, npoints)
+        booleanization_result.append(boolean_distance(X, W_prime @ H_prime))
+
+    if plot == True:
+        x = range(1, nb_tests)
+
+        fig, ax = plt.subplots()
+        ax.set_ylabel("final distance")
+        ax.set_xlabel("number of points")
+        ax.set_title(
+            f"Final distance vs number of point in booleanization on a {n} by {m}"
+        )
+        ax.plot(x, booleanization_result, label="final distance")
+        plt.legend()
+        plt.savefig("../results/npoints_booleanization.png")
+
+    return booleanization_result
+
+
+def test_nb_points_3d(nb_tests, plot: bool):
+    # for different matrix sizes
+    result_matrix = []
+
+    for size in range(1, nb_tests):
+        bool_result = test_nb_point_booleanization(
+            size, size, nb_tests, plot=False, k=max(1, int(size / 2))
+        )
+        result_matrix.append(
+            bool_result
+        )  # chaque ligne correspond à une taille de matrice
+
+    result_matrix = np.array(result_matrix)
+
+    if plot:
+        # plt.figure(figsize=(10, 8))
+        plt.imshow(
+            result_matrix,
+            origin="lower",
+            extent=(1.0, float(nb_tests - 1), 1.0, float(nb_tests - 1)),
+        )
+        plt.colorbar(label="final boolean distance")
+        plt.xlabel("nb points in booleanization")
+        plt.ylabel("Size of the matrix")
+        plt.title("nb points and size of matrix vs boolean distance (k=size/2)")
+        plt.savefig("../results/3d_booleanization_heatmap.png")
+
+
+def test_latent_dimension(X:np.ndarray, nb_tests: int, nb_points):
+
+
+    results_distance = []
+    for k in range(1, nb_tests):
+        W, H = banmf(X, k, 1000, nb_points)
+        results_distance.append(boolean_distance(X, W @ H))
+
+    x = range(1, nb_tests)
+    return results_distance
+
+
+def test_latent_booleanization_3d(n: int, m: int, nb_tests: int, plot: bool):
+    result_matrix = []
+
+
+    X = (np.random.rand(n, m) > 0.5).astype(bool)
+
+    for nb_points in range(1, nb_tests):
+        result_matrix.append(test_latent_dimension(X, nb_tests, nb_points))
+
+    if plot:
+        # plt.figure(figsize=(10, 8))
+        plt.imshow(
+            result_matrix,
+            origin="lower",
+            extent=(1.0, float(nb_tests - 1), 1.0, float(nb_tests - 1)),
+        )
+        plt.colorbar(label="final boolean distance")
+        plt.xlabel("latent dimension")
+        plt.ylabel("nb points in booleanization")
+        plt.title("nb of points and latent dimension vs final distance")
+        plt.savefig("../results/latent_booleanization_heatmap.png")
+
+def test_convergence_auxiliary(n:int, m:int, Niter:int, plot:bool):
+    X = (np.random.rand(n, m) > 0.5).astype(bool)
+    k=random.randint(1,min(n,m))
+    Y,W,H=banmf_initialization(X,k)
+    W,H,convergence_result=banmf_auxiliary_solve(X,Y,W,H,k,Niter)
+
+    if plot:
+        x = range(0, Niter)
+        fig, ax = plt.subplots()
+        ax.set_ylabel("euclidean distance")
+        ax.set_xlabel("iteration")
+        ax.set_title(f"convergence for {n} by {m} matrix with {Niter} iterations")
+        ax.plot(x, convergence_result, label="current distance")
+        plt.legend()
+        plt.savefig("../results/auxiliary_convergence.png")
+
+
+
+# test_nb_point_booleanization(50,50,100)
+# test_latent_dimension(100, 100, 100)
+# test_nb_points_3d(50,True)
+test_latent_booleanization_3d(50, 50, 50, True)
+#test_convergence_auxiliary(50,50,200,True)
