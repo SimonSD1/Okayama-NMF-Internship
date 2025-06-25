@@ -147,6 +147,7 @@ def local_search(
     lowest = boolean_distance(X, W @ H)
 
     while not finished:
+        print("iter")
         finished = True
         for i in range(n):
             for j in range(k):
@@ -167,7 +168,6 @@ def local_search(
                 else:
                     lowest = boolean_distance(X, W @ H)
                     finished = False
-        finished=True
 
     return W, H
 
@@ -196,7 +196,6 @@ def banmf_local_search(
 
     print("avant local search : ", boolean_distance(X,W@H))
     
-
     W,H = local_search(X,W,H,k)
 
     return W, H
