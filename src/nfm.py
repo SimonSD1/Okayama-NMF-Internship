@@ -44,7 +44,6 @@ def nmf(V: np.ndarray, r: int, iter_max: int, tolerance: float) -> Tuple[
 
         distance = euclidian_distance(V, W @ H)
 
-        # print(distance)
 
         if previous_distance - distance < tolerance:
             break

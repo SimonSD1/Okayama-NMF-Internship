@@ -128,11 +128,31 @@ def compair_banmf(X:np.ndarray,k:int, Niter:int, nb_points:int)->bool:
     return (W_yamada==W).all() and (H_yamada==H).all()
 
 
+def test_brute_force(X:np.ndarray, k:int):
+    W,H=brute_force(X,k)
+    print("")
+    print(boolean_distance(X,W@H))
+
+def compair_factorizations(n:int, m:int, k:int):
+
+    X=(np.random.rand(n,m)>0.5).astype(bool)
+
+    W_banmf,H_banmf = banmf(X,k,200,25) 
+
+    W_brute,H_brute = brute_force(X,k)
+
+    print("distance banmf = ",boolean_distance(X,W_banmf@H_banmf))
+    print("distance brute = ",boolean_distance(X,W_brute@H_brute))
+
+
 # test_nb_point_booleanization(50,50,100)
 # test_latent_dimension(100, 100, 100)
 # test_nb_points_3d(50,True)
 #test_latent_booleanization_3d(50, 50, 50, True)
 # test_convergence_auxiliary(50,50,200,True)
+
 X=(np.random.rand(100,100)>0.5).astype(bool)
 
-print(compair_banmf(X,2,200,20))
+W,H=banmf_local_search(X,60,500,300)
+
+print(boolean_distance(X,W@H))
