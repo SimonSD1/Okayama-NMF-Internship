@@ -1,6 +1,5 @@
 from banmf import *
 
-
 def test_nb_point_booleanization(
     n: int, m: int, nb_tests: int, plot: bool, k: Optional[int] = None
 ):
@@ -62,8 +61,7 @@ def test_nb_points_3d(nb_tests, plot: bool):
         plt.savefig("../results/3d_booleanization_heatmap.png")
 
 
-def test_latent_dimension(X:np.ndarray, nb_tests: int, nb_points):
-
+def test_latent_dimension(X: np.ndarray, nb_tests: int, nb_points):
 
     results_distance = []
     for k in range(1, nb_tests):
@@ -76,7 +74,6 @@ def test_latent_dimension(X:np.ndarray, nb_tests: int, nb_points):
 
 def test_latent_booleanization_3d(n: int, m: int, nb_tests: int, plot: bool):
     result_matrix = []
-
 
     X = (np.random.rand(n, m) > 0.5).astype(bool)
 
@@ -96,11 +93,12 @@ def test_latent_booleanization_3d(n: int, m: int, nb_tests: int, plot: bool):
         plt.title("nb of points and latent dimension vs final distance")
         plt.savefig("../results/latent_booleanization_heatmap.png")
 
-def test_convergence_auxiliary(n:int, m:int, Niter:int, plot:bool):
+
+def test_convergence_auxiliary(n: int, m: int, Niter: int, plot: bool):
     X = (np.random.rand(n, m) > 0.5).astype(bool)
-    k=random.randint(1,min(n,m))
-    Y,W,H=banmf_initialization(X,k)
-    W,H,convergence_result=banmf_auxiliary_solve(X,Y,W,H,k,Niter)
+    k = random.randint(1, min(n, m))
+    Y, W, H = banmf_initialization(X, k)
+    W, H, convergence_result = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
 
     if plot:
         x = range(0, Niter)
@@ -113,9 +111,11 @@ def test_convergence_auxiliary(n:int, m:int, Niter:int, plot:bool):
         plt.savefig("../results/auxiliary_convergence.png")
 
 
-
 # test_nb_point_booleanization(50,50,100)
 # test_latent_dimension(100, 100, 100)
 # test_nb_points_3d(50,True)
-test_latent_booleanization_3d(50, 50, 50, True)
-#test_convergence_auxiliary(50,50,200,True)
+#test_latent_booleanization_3d(50, 50, 50, True)
+# test_convergence_auxiliary(50,50,200,True)
+X=(np.random.rand(5,5)>0.5).astype(bool)
+
+banmf(X,2,200,20)
