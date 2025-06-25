@@ -110,12 +110,29 @@ def test_convergence_auxiliary(n: int, m: int, Niter: int, plot: bool):
         plt.legend()
         plt.savefig("../results/auxiliary_convergence.png")
 
+def compair_banmf(X:np.ndarray,k:int, Niter:int, nb_points:int)->bool:
+    n,m=np.shape(X)
+
+    Y, W, H = banmf_initialization(X, k)
+
+    W_save, H_save, Y_save = W.copy(),H.copy(),Y.copy()
+
+    W_yamada,H_yamada=yamada_solve(Niter,W,H,Y,X,n,m,k)
+
+    W, H, _ = banmf_auxiliary_solve(X, Y_save, W_save, H_save, k, Niter)
+
+
+    W_yamada,H_yamada=yamade_booleanization(W_yamada,H_yamada,X,nb_points)
+
+    W,H=booleanization(X, W, H, nb_points)
+    return (W_yamada==W).all() and (H_yamada==H).all()
+
 
 # test_nb_point_booleanization(50,50,100)
 # test_latent_dimension(100, 100, 100)
 # test_nb_points_3d(50,True)
 #test_latent_booleanization_3d(50, 50, 50, True)
 # test_convergence_auxiliary(50,50,200,True)
-X=(np.random.rand(5,5)>0.5).astype(bool)
+X=(np.random.rand(100,100)>0.5).astype(bool)
 
-banmf(X,2,200,20)
+print(compair_banmf(X,2,200,20))

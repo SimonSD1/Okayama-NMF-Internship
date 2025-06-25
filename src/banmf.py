@@ -36,6 +36,7 @@ def banmf_initialization(
 
 
 def yamada_solve(loop,W,H,Y,X,n,m,rank)->Tuple[np.ndarray,np.ndarray]:
+    
     for t in range(loop): # t=0から loop-1 回 繰り返す
         #loop_cnt += 1 
         
@@ -64,6 +65,7 @@ def yamada_solve(loop,W,H,Y,X,n,m,rank)->Tuple[np.ndarray,np.ndarray]:
     return W,H
 
 def yamade_booleanization(W,H,X,npoint)->Tuple[np.ndarray,np.ndarray]:
+    print(W.min(),W.max())
     w_thresholds = np.linspace(W.min(), W.max(), npoint)
     h_thresholds = np.linspace(H.min(), H.max(), npoint)
 
@@ -101,8 +103,8 @@ def banmf_auxiliary_solve(
 
     convergence_result = []
     for _ in range(Niter):
-        W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose() + epsilon))
-        H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H + epsilon))
+        W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose()))
+        H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H ))
 
         current_result = W @ H
         # clip allows to put all data in the constraint
@@ -115,7 +117,7 @@ def banmf_auxiliary_solve(
 def booleanization(
     X: np.ndarray, W: np.ndarray, H: np.ndarray, npoints: int
 ) -> Tuple[np.ndarray, np.ndarray]:
-
+    print(np.min(W))
     W_p = np.linspace(np.min(W), np.max(W), npoints)
     H_p = np.linspace(np.min(H), np.max(H), npoints)
 
@@ -146,18 +148,8 @@ def banmf(
 
     Y, W, H = banmf_initialization(X, k)
 
-    W_yamada,H_yamada=yamada_solve(200,W,H,Y,X,n,m,k)
-
     W, H, _ = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
 
-    W_yamada,H_yamada=yamade_booleanization(W_yamada,H_yamada,X,nb_points)
-
     W,H=booleanization(X, W, H, nb_points)
-
-    print("yamada : ")
-    print(W_yamada,H_yamada)
-
-    print("simon")
-    print(W,H)
 
     return W,H
