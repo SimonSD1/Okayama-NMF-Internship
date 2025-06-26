@@ -144,6 +144,16 @@ def compair_factorizations(n:int, m:int, k:int):
     print("distance banmf = ",boolean_distance(X,W_banmf@H_banmf))
     print("distance brute = ",boolean_distance(X,W_brute@H_brute))
 
+def test_local_search(n:int,m:int):
+
+
+    X=(np.random.rand(n,m)>0.5).astype(bool)
+
+    W,H,before=banmf_local_search(X,2,500,25)
+
+    print(before)
+
+    print(boolean_distance(X,W@H))
 
 # test_nb_point_booleanization(50,50,100)
 # test_latent_dimension(100, 100, 100)
@@ -151,8 +161,4 @@ def compair_factorizations(n:int, m:int, k:int):
 #test_latent_booleanization_3d(50, 50, 50, True)
 # test_convergence_auxiliary(50,50,200,True)
 
-X=(np.random.rand(100,100)>0.5).astype(bool)
-
-W,H=banmf_local_search(X,60,500,300)
-
-print(boolean_distance(X,W@H))
+test_local_search(500,500)

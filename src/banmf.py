@@ -16,7 +16,7 @@ def euclidian_distance(A: np.ndarray, B: np.ndarray) -> float:
     return np.sum((A - B) ** 2)
 
 
-def boolean_distance(A: np.ndarray, B: np.ndarray) -> float:
+def boolean_distance(A: np.ndarray, B: np.ndarray) -> int:
     return np.sum(A != B)
 
 
@@ -137,6 +137,11 @@ def booleanization(
     return W_prime, H_prime
 
 
+# possible uptimization compute only the dot product of the desired i and j
+# not the full matrix product for the distance
+# nb different (X, W@H)
+# since we change only one component we can use a stored matrix and change only
+# the component that need
 def local_search(
     X: np.ndarray, W: np.ndarray, H: np.ndarray, k: int
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -147,29 +152,89 @@ def local_search(
     lowest = boolean_distance(X, W @ H)
 
     while not finished:
-        print("iter")
         finished = True
         for i in range(n):
             for j in range(k):
-                W[i][j] = not W[i][j]
+                W[i][j] ^= True
 
-                if boolean_distance(X, W @ H) >= lowest:
-                    W[i][j] = not W[i][j]
+                distance = boolean_distance(X, W @ H)
+                if distance >= lowest:
+                    W[i][j] ^= True
                 else:
-                    lowest = boolean_distance(X, W @ H)
+                    lowest = distance
                     finished = False
 
         for i in range(k):
             for j in range(m):
-                H[i][j] = not H[i][j]
+                H[i][j] ^= True
+                distance = boolean_distance(X, W @ H)
 
-                if boolean_distance(X, W @ H)>=lowest:
-                    H[i][j] = not H[i][j]
+                if distance >= lowest:
+                    H[i][j] ^= True
                 else:
-                    lowest = boolean_distance(X, W @ H)
+                    lowest = distance
                     finished = False
 
     return W, H
+
+def opti_local_search(
+    X: np.ndarray, W: np.ndarray, H: np.ndarray, k: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    finished = False
+
+    n, m = np.shape(X)
+
+    row_distances=[0]*n
+    column_distance=[0]*m
+
+    #lowest = boolean_distance(X, W @ H)
+
+    while not finished:
+        finished = True
+
+        print("iter")
+
+
+
+        # gros calcul des distances par lignes
+
+        for row in range(n):
+            row_distances[row] = boolean_distance(X[row], W[row]@H)
+
+
+        for i in range(n):
+            for j in range(k):
+                W[i][j] ^= True
+
+                # compute the matrix product only on modified data
+                distance_modified_row=boolean_distance(X[i], W[i]@H)
+
+                if distance_modified_row >= row_distances[i]:
+                    W[i][j] ^= True
+                else:
+                    row_distances[i] = distance_modified_row
+                    finished = False
+
+        # gros calcul des distances par colonnes
+        for column in range(m):
+            column_distance[column] = boolean_distance(X[:,column], W@H[:,column])
+
+        for i in range(k):
+            for j in range(m):
+                H[i][j] ^= True
+
+                # si la distance de la colonnes j est inferieur on garde
+                # et met a jour l'array des distance colonnes
+                distance_modified_column = boolean_distance(X[:,j], W@H[:,j])
+
+                if distance_modified_column >= column_distance[j]:
+                    H[i][j] ^= True
+                else:
+                    column_distance[j] = distance_modified_column
+                    finished = False
+
+    return W, H
+
 
 
 def banmf(
@@ -184,9 +249,10 @@ def banmf(
 
     return W, H
 
+
 def banmf_local_search(
     X: np.ndarray, k: int, Niter: int, nb_points: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, int]:
 
     Y, W, H = banmf_initialization(X, k)
 
@@ -194,11 +260,25 @@ def banmf_local_search(
 
     W, H = booleanization(X, W, H, nb_points)
 
-    print("avant local search : ", boolean_distance(X,W@H))
-    
-    W,H = local_search(X,W,H,k)
+    before_local_search = boolean_distance(X, W @ H)
 
-    return W, H
+    opti_W=W.copy()
+    opti_H=H.copy()
+    print("avant local search : ", before_local_search)
+
+    start=time.time()
+    W, H = local_search(X, W, H, k)
+    time_non_opti= time.time()-start
+
+    start=time.time()
+    opti_W,opti_H=opti_local_search(X,opti_W,opti_H,k)
+    time_opti= time.time()-start
+
+    print("opti: ",boolean_distance(X,opti_W@opti_H),time_non_opti)
+    print("non opti : ",boolean_distance(X,W@H), time_opti)
+
+    return W, H, before_local_search
+
 
 def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
     n, m = np.shape(X)
@@ -215,20 +295,19 @@ def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
     best_H = np.random.rand(k, m)
 
     for int_w in range(nb_matrices_W):
-        for int_h in range(nb_matrices_H):
 
-            bits_w = np.array(
-                list(np.binary_repr(int_w, width=total_bits_W)), dtype=int
-            ).astype(bool)
-            W = bits_w.reshape((n, k))
+        bits_w = np.array(
+            list(np.binary_repr(int_w, width=total_bits_W)), dtype=int
+        ).astype(bool)
+        W = bits_w.reshape((n, k))
+
+        for int_h in range(nb_matrices_H):
 
             bits_h = np.array(
                 list(np.binary_repr(int_h, width=total_bits_H)), dtype=int
             ).astype(bool)
             H = bits_h.reshape((k, m))
 
-            print(W)
-            print(H)
             distance = boolean_distance(X, W @ H)
             if distance < lowest:
                 best_H = H
