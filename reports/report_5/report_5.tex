@@ -1,0 +1,59 @@
+\documentclass[a4paper,11pt]{article}
+%
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{latexsym}
+\usepackage{natbib}
+\usepackage{float}
+%
+\addtolength{\textwidth}{40mm}
+\addtolength{\oddsidemargin}{-20mm}
+\addtolength{\evensidemargin}{-20mm}
+\addtolength{\textheight}{15mm}
+\addtolength{\topmargin}{-10mm}
+%
+\pagestyle{empty}
+%
+\title{Progress Report}
+\author{Simon Sepiol-Duchemin}
+\date{\today}
+%\date{June 25, 2019}
+%
+\begin{document}
+%
+\maketitle
+\thispagestyle{empty}
+%
+\section{Research Objective and Goal}
+The objective of this study is to improve the booleanization part of algorithm from \cite{9521203}. Starting with understanding the nonnegative matrix factorization problem and algorithms to solve it.
+\section{Short-Term Goals}
+\begin{enumerate}
+\item Compare the result of implementation of the banmf algorithm of Simon and Yamada Kento.
+\item Implement the brute force algorithm
+\item Implement the local search algorithm 
+\end{enumerate}
+\section{Progress}
+\begin{enumerate}
+\item We have compared our codes, they give the same result.
+\item I have implemented the brute force algorithm
+\item I have implemented the local search algorithm.
+\item I tried to optimize it by computing only the dot product of the other matrix with the row or column of the changed entry with no success, the computation time is increased by more than a 100. I think that the theoritical complexity is better but it lacks the optimization of numpy. The theoritical complexity of one iteration of the optimized version should be $O(2mnk + n^2km + nmk^2 + m^2kn +2k^2mn)$ and $O(n^2k^2m + n^2km+m^2k^2n+m^2kn)$ for the non optimized one. The difference of the two is $O(n^2k^2m+m^2k^2n - 2(mnk+k^2nm))$.
+\end{enumerate}
+
+\section{Results}
+\begin{center}
+    
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[scale=0.6]{../../results/local_search_with_info.png}  
+    \end{center}
+\end{figure}
+\end{center}
+
+
+\bibliographystyle{apalike}
+
+\bibliography{biblio}
+\end{document}

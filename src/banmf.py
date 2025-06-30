@@ -252,7 +252,7 @@ def banmf(
 
 def banmf_local_search(
     X: np.ndarray, k: int, Niter: int, nb_points: int
-) -> Tuple[np.ndarray, np.ndarray, int]:
+) -> Tuple[np.ndarray, np.ndarray, int, float]:
 
     Y, W, H = banmf_initialization(X, k)
 
@@ -270,14 +270,7 @@ def banmf_local_search(
     W, H = local_search(X, W, H, k)
     time_non_opti= time.time()-start
 
-    start=time.time()
-    opti_W,opti_H=opti_local_search(X,opti_W,opti_H,k)
-    time_opti= time.time()-start
-
-    print("opti: ",boolean_distance(X,opti_W@opti_H),time_non_opti)
-    print("non opti : ",boolean_distance(X,W@H), time_opti)
-
-    return W, H, before_local_search
+    return W, H, before_local_search, time_non_opti
 
 
 def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
