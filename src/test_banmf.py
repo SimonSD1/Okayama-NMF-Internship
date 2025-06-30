@@ -176,10 +176,68 @@ def test_local_search( nb_tests:int):
     plt.savefig("../results/local_search_with_info.png")
     plt.show()
 
+def test_optimisation_local_search(nb_tests:int, Niter:int):
+
+    result_opti=[]
+    result_non_opti=[]
+    sizes=[]
+
+    for i in range(1, nb_tests + 1):
+        size = i * 5
+
+        sizes.append(size)
+
+        X = (np.random.rand(size, size) > 0.5).astype(bool)
+
+        k=size//2
+
+        Y, W, H = banmf_initialization(X, k)
+
+        W, H = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
+
+        W,H=booleanization(X, W, H, 25)
+
+        W_opti=W.copy()
+        H_opti=H.copy()
+
+        start = time.time()
+        W,H = local_search(X,W,H,k)
+        time_non_opti = time.time()-start
+
+        start=time.time()
+        W_opti,H_opti = opti_local_search(X,W_opti,H_opti,k)
+        time_opti=time.time()-start
+
+        result_opti.append(time_opti)
+        result_non_opti.append(time_non_opti)
+
+        if((W!=W_opti).any() or (H!=H_opti).any()):
+            print("error!!!!!!!!!!!!!!!!!!!!!!!!")
+
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Time")
+    ax.set_xlabel("Matrix size (n x n)")
+    ax.set_title("Local search: opti vs naive")
+
+    print(time_non_opti)
+    print(time_opti)
+    print(sizes)
+
+    ax.plot(sizes, result_non_opti, label="time non opti", marker='o')
+    ax.plot(sizes, result_opti, label="time opti search", marker='x')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("../results/optimization_local_search.png")
+    plt.show()
+
+
+
+
 
 # test_nb_point_booleanization(50,50,100)
 # test_latent_dimension(100, 100, 100)
 # test_nb_points_3d(50,True)
 #test_latent_booleanization_3d(50, 50, 50, True)
 # test_convergence_auxiliary(50,50,200,True)
-test_local_search(10)
+#test_local_search(10)
+test_optimisation_local_search(15,200)

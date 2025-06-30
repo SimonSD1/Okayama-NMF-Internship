@@ -37,21 +37,24 @@ The objective of this study is to improve the booleanization part of algorithm f
 \section{Progress}
 \begin{enumerate}
 \item We have compared our codes, they give the same result.
-\item I have implemented the brute force algorithm
+\item I have implemented the brute force algorithm, which is unsuable.
 \item I have implemented the local search algorithm.
-\item I tried to optimize it by computing only the dot product of the other matrix with the row or column of the changed entry. The theoritical complexity of one iteration of the optimized version should be $O(2mnk + n^2km + nmk^2 + m^2kn +2k^2mn)$ and $O(n^2k^2m + n^2km+m^2k^2n+m^2kn)$ for the non optimized one. The difference of the two is $O(n^2k^2m+m^2k^2n - 2(mnk+k^2nm))$.
+I tried to optimize it by computing only the dot product of the other matrix with the row or column of the changed entry. The theoritical complexity of one iteration of the optimized version should be $O(2(nm+nmk^2+nmk))$ and $O(mn^2k^2+n^2mk+nm^2k^2+nm^2k^2+m^2nk)$ for the non optimized one.
 \end{enumerate}
 
 \section{Results}
-\begin{center}
     
 \begin{figure}[H]
-    \begin{center}
-        \includegraphics[scale=0.6]{../../results/local_search_with_info.png}  
-    \end{center}
+    \centering
+    \includegraphics[scale=0.6]{../../results/local_search_with_info.png}
+    \caption{Local Search with Information}
 \end{figure}
-\end{center}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.5]{../../results/optimization_local_search.png}
+    \caption{Optimized Local Search}
+\end{figure}
 
 \bibliographystyle{apalike}
 

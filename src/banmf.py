@@ -104,8 +104,8 @@ def banmf_auxiliary_solve(
 ) -> Tuple[np.ndarray, np.ndarray]:
 
     for _ in range(Niter):
-        W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose()))
-        H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H))
+        W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose()+epsilon))
+        H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H+epsilon))
 
         current_result = W @ H
         # clip allows to put all data in the constraint
