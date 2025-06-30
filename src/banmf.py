@@ -20,6 +20,10 @@ def boolean_distance(A: np.ndarray, B: np.ndarray) -> int:
     return np.sum(A != B)
 
 
+def boolean_distance_axis(X, Y, axis=1):
+    return np.count_nonzero(X != Y, axis=axis)
+
+
 def banmf_initialization(
     X: np.ndarray, k: int
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -97,9 +101,8 @@ def yamade_booleanization(W, H, X, npoint) -> Tuple[np.ndarray, np.ndarray]:
 
 def banmf_auxiliary_solve(
     X: np.ndarray, Y: np.ndarray, W: np.ndarray, H: np.ndarray, k: int, Niter: int
-) -> Tuple[np.ndarray, np.ndarray, list]:
+) -> Tuple[np.ndarray, np.ndarray]:
 
-    convergence_result = []
     for _ in range(Niter):
         W = W * ((Y @ H.transpose()) / (W @ H @ H.transpose()))
         H = H * ((W.transpose() @ Y) / (W.transpose() @ W @ H))
@@ -107,9 +110,8 @@ def banmf_auxiliary_solve(
         current_result = W @ H
         # clip allows to put all data in the constraint
         Y[X] = np.clip(current_result[X], 1, k)
-        convergence_result.append(euclidian_distance(Y, W @ H))
 
-    return W, H, convergence_result
+    return W, H
 
 
 def booleanization(
@@ -177,47 +179,37 @@ def local_search(
 
     return W, H
 
+
 def opti_local_search(
     X: np.ndarray, W: np.ndarray, H: np.ndarray, k: int
 ) -> Tuple[np.ndarray, np.ndarray]:
+
     finished = False
 
     n, m = np.shape(X)
-
-    row_distances=[0]*n
-    column_distance=[0]*m
-
-    #lowest = boolean_distance(X, W @ H)
+    WH = W @ H
 
     while not finished:
         finished = True
 
-        print("iter")
-
-
-
-        # gros calcul des distances par lignes
-
-        for row in range(n):
-            row_distances[row] = boolean_distance(X[row], W[row]@H)
-
+        row_distances = boolean_distance_axis(X, WH, axis=1)
 
         for i in range(n):
             for j in range(k):
                 W[i][j] ^= True
 
                 # compute the matrix product only on modified data
-                distance_modified_row=boolean_distance(X[i], W[i]@H)
+                temp_result = W[i] @ H
+                distance_modified_row = boolean_distance(X[i], temp_result)
 
                 if distance_modified_row >= row_distances[i]:
                     W[i][j] ^= True
                 else:
                     row_distances[i] = distance_modified_row
+                    WH[i] = temp_result
                     finished = False
 
-        # gros calcul des distances par colonnes
-        for column in range(m):
-            column_distance[column] = boolean_distance(X[:,column], W@H[:,column])
+        column_distance = boolean_distance_axis(X, WH, axis=0)
 
         for i in range(k):
             for j in range(m):
@@ -225,16 +217,17 @@ def opti_local_search(
 
                 # si la distance de la colonnes j est inferieur on garde
                 # et met a jour l'array des distance colonnes
-                distance_modified_column = boolean_distance(X[:,j], W@H[:,j])
+                temp_result = W @ H[:, j]
+                distance_modified_column = boolean_distance(X[:, j], temp_result)
 
                 if distance_modified_column >= column_distance[j]:
                     H[i][j] ^= True
                 else:
                     column_distance[j] = distance_modified_column
+                    WH[:, j] = temp_result
                     finished = False
 
     return W, H
-
 
 
 def banmf(
@@ -243,7 +236,7 @@ def banmf(
 
     Y, W, H = banmf_initialization(X, k)
 
-    W, H, _ = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
+    W, H = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
 
     W, H = booleanization(X, W, H, nb_points)
 
@@ -252,25 +245,28 @@ def banmf(
 
 def banmf_local_search(
     X: np.ndarray, k: int, Niter: int, nb_points: int
-) -> Tuple[np.ndarray, np.ndarray, int, float]:
+) -> Tuple[np.ndarray, np.ndarray, int, float, float]:
 
+    start = time.time()
     Y, W, H = banmf_initialization(X, k)
 
-    W, H, _ = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
+    W, H  = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
 
     W, H = booleanization(X, W, H, nb_points)
 
+    time_before = time.time() - start
+
     before_local_search = boolean_distance(X, W @ H)
 
-    opti_W=W.copy()
-    opti_H=H.copy()
-    print("avant local search : ", before_local_search)
+    print(" time / distance before : ",time_before, before_local_search)
 
-    start=time.time()
-    W, H = local_search(X, W, H, k)
-    time_non_opti= time.time()-start
+    start = time.time()
+    W, H = opti_local_search(X, W, H, k)
+    time_local_search = time.time() - start
 
-    return W, H, before_local_search, time_non_opti
+    print("time / distance of local search", time_local_search, boolean_distance(X, W @ H))
+
+    return W, H, before_local_search, time_before, time_local_search
 
 
 def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:

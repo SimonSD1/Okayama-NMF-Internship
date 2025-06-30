@@ -11,7 +11,7 @@ def test_nb_point_booleanization(
 
     Y, W, H = banmf_initialization(X, k)
 
-    W, H, _ = banmf_auxiliary_solve(X, Y, W, H, k, 200)
+    W, H = banmf_auxiliary_solve(X, Y, W, H, k, 200)
 
     booleanization_result = []
     for npoints in range(1, nb_tests):
@@ -94,23 +94,6 @@ def test_latent_booleanization_3d(n: int, m: int, nb_tests: int, plot: bool):
         plt.title("nb of points and latent dimension vs final distance")
         plt.savefig("../results/latent_booleanization_heatmap.png")
 
-
-def test_convergence_auxiliary(n: int, m: int, Niter: int, plot: bool):
-    X = (np.random.rand(n, m) > 0.5).astype(bool)
-    k = random.randint(1, min(n, m))
-    Y, W, H = banmf_initialization(X, k)
-    W, H, convergence_result = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
-
-    if plot:
-        x = range(0, Niter)
-        fig, ax = plt.subplots()
-        ax.set_ylabel("euclidean distance")
-        ax.set_xlabel("iteration")
-        ax.set_title(f"convergence for {n} by {m} matrix with {Niter} iterations")
-        ax.plot(x, convergence_result, label="current distance")
-        plt.legend()
-        plt.savefig("../results/auxiliary_convergence.png")
-
 def compair_banmf(X:np.ndarray,k:int, Niter:int, nb_points:int)->bool:
     n,m=np.shape(X)
 
@@ -120,7 +103,7 @@ def compair_banmf(X:np.ndarray,k:int, Niter:int, nb_points:int)->bool:
 
     W_yamada,H_yamada=yamada_solve(Niter,W,H,Y,X,n,m,k)
 
-    W, H, _ = banmf_auxiliary_solve(X, Y_save, W_save, H_save, k, Niter)
+    W, H = banmf_auxiliary_solve(X, Y_save, W_save, H_save, k, Niter)
 
 
     W_yamada,H_yamada=yamade_booleanization(W_yamada,H_yamada,X,nb_points)
@@ -158,9 +141,7 @@ def test_local_search( nb_tests:int):
         size = i * 15
         X = (np.random.rand(size, size) > 0.5).astype(bool)
 
-        start_time = time.time()
-        W, H, before, time_non_opti = banmf_local_search(X, size // 2, 500, 25)
-        elapsed_time = time.time() - start_time
+        W, H, before,time_before, time_local_search = banmf_local_search(X, size // 2, 1000, 25)
 
         after = boolean_distance(X, W @ H)
         gain = 100 * (before - after) / before if before != 0 else 0
@@ -169,7 +150,7 @@ def test_local_search( nb_tests:int):
         final_distances.append(after)
         sizes.append(size)
         distance_gains.append(gain)
-        time_pourcentage.append(100 * (elapsed_time-time_non_opti)/elapsed_time )
+        time_pourcentage.append(100 * ((time_local_search))/(time_local_search+time_before) )
 
 
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -182,7 +163,7 @@ def test_local_search( nb_tests:int):
 
     for i, size in enumerate(sizes):
         ax.annotate(
-            f"distance:{distance_gains[i]:.1f}%\ntime:{time_pourcentage[i]:.2f}%",
+            f"distance gained:{distance_gains[i]:.2f}%\ntime over total:{time_pourcentage[i]:.2f}%",
             (size, final_distances[i]),
             textcoords="offset points",
             xytext=(5, -10),
