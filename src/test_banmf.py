@@ -208,6 +208,7 @@ def test_optimisation_local_search(nb_tests:int, Niter:int):
         W_opti,H_opti = opti_local_search(X,W_opti,H_opti,k)
         time_opti=time.time()-start
 
+
         result_opti.append(time_opti)
         result_non_opti.append(time_non_opti)
 
