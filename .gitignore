@@ -1,6 +1,7 @@
 results/
 Session.vim
-
+src/BMF_experiments.py
+src/data
 # for latex
 *.aux
 *.bbl
