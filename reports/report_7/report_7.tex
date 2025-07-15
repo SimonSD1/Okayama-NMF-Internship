@@ -1,0 +1,62 @@
+\documentclass[a4paper,11pt]{article}
+%
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{latexsym}
+\usepackage{natbib}
+\usepackage{float}
+%
+\addtolength{\textwidth}{40mm}
+\addtolength{\oddsidemargin}{-20mm}
+\addtolength{\evensidemargin}{-20mm}
+\addtolength{\textheight}{15mm}
+\addtolength{\topmargin}{-10mm}
+%
+\pagestyle{empty}
+%
+\title{Progress Report}
+\author{Simon Sepiol-Duchemin}
+\date{\today}
+%\date{June 25, 2019}
+%
+\begin{document}
+%
+\maketitle
+\thispagestyle{empty}
+%
+\section{Research Objective and Goal}
+The objective of this study is to improve the booleanization part of algorithm from \cite{9521203}. Starting with understanding the nonnegative matrix factorization problem and algorithms to solve it.
+\section{Short-Term Goals}
+\begin{enumerate}
+\item Implement the algorithm from \cite{10541718}, add the local search to it and compare to \cite{9521203}.
+\end{enumerate}
+\section{Progress}
+\begin{enumerate}
+    \item I have implemented the algorithm and added the local search. 
+    \item I am currently searching for the best parametres to compare with banmf.
+\end{enumerate}
+
+\section{Results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{../../src/algorithm_comparison_avg1.png}
+    \caption{Local Search with Information}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{../../src/cardano_parameter_heatmap.png}
+    \caption{Local Search with Information}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.4]{../../src/lambda_performance_analysis.png}
+    \caption{Local Search with Information}
+\end{figure}
+\bibliographystyle{apalike}
+
+\bibliography{biblio}
+\end{document}
