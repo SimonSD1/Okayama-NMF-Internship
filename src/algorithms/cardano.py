@@ -1,52 +1,6 @@
 ## Implementation of the algorithm from "A New Boolean Matrix Factorization Algotithm Based on Cardano's Mathod"
 
-
-import random
-import numpy as np
-from typing import Optional, Tuple
-import time
-import matplotlib.pyplot as plt
-from sklearn import decomposition
-from mpl_toolkits import mplot3d
-
-epsilon = 1e-10
-
-
-def euclidian_distance(A: np.ndarray, B: np.ndarray) -> float:
-    return np.sum((A - B) ** 2)
-
-
-def boolean_distance(A: np.ndarray, B: np.ndarray) -> int:
-    return np.sum(A != B)
-
-
-def boolean_distance_axis(X, Y, axis=1):
-    return np.count_nonzero(X != Y, axis=axis)
-
-
-def euclidian_norm_squared(v):
-    return np.dot(v, v)
-
-
-def full_objective(Y, W, H, lam):
-    fit = np.sum((Y - W @ H.T) ** 2)
-    regW = lam / 2 * np.sum((W * W - W) ** 2)
-    regH = lam / 2 * np.sum((H * H - H) ** 2)
-    return fit + regW + regH
-
-
-def banmf_initialization(
-    X: np.ndarray, k: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-
-    (n, m) = X.shape
-
-    # Initialization
-    Y = X.copy().astype(float)
-    W = np.random.rand(n, k) * 10
-    H = np.random.rand(k, m) * 10
-
-    return Y, W, H.T
+from algorithms.utils import *
 
 
 def solve_cardano(p, q):
@@ -57,26 +11,30 @@ def solve_cardano(p, q):
     return u + v
 
 
+# try to parallelize change update E and RK
 def update_w_h_y(X, W, H, Y, lam, delta):
     M, K = W.shape
 
-    E = Y - W @ H.T
+    E = Y - W @ H
 
     for k in range(K):
 
+        hk = H[k, :]
+
         ## the outer function compute the correct thing
         # wk@hk.T does not work because hk.T==hk here
-        Rk = E + np.outer(W[:, k], H[:, k])
+        Rk = E + np.outer(W[:, k], hk)
 
-        norm_hk_sq = np.linalg.norm(H[:, k]) ** 2
+        norm_hk_sq = np.linalg.norm(hk) ** 2
         p = norm_hk_sq / lam + (2.0 * delta - 1.0) / 4.0
         q = (
             (norm_hk_sq / (2 * lam) + delta / 4)
-            - (1 / lam) * (Rk @ H[:, k])
+            - (1 / lam) * (Rk @ hk)
             - (delta / 2) * W[:, k]
         )
 
         sm = solve_cardano(p, q)
+
         W[:, k] = np.maximum(0, sm + 0.5)
 
         norm_wk_sq = np.linalg.norm(W[:, k]) ** 2
@@ -84,15 +42,15 @@ def update_w_h_y(X, W, H, Y, lam, delta):
         v = (
             (norm_wk_sq / (2 * lam) + delta / 4)
             - (1 / lam) * (Rk.T @ W[:, k])
-            - (delta / 2) * H[:, k]
+            - (delta / 2) * H[k, :]
         )
 
         tn = solve_cardano(u, v)
-        H[:, k] = np.maximum(0, tn + 0.5)
+        H[k, :] = np.maximum(0, tn + 0.5)
 
-        E = Rk - np.outer(W[:, k], H[:, k])
+        E = Rk - np.outer(W[:, k], H[k, :])
 
-    WH = W @ H.T
+    WH = W @ H
     Y[X] = np.clip(WH[X], 1, K)
 
     return W, H, Y
@@ -101,9 +59,9 @@ def update_w_h_y(X, W, H, Y, lam, delta):
 def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
     M, K = W.shape
 
-    E = Y - W @ H.T
-    grad_W = -2 * (E @ H) + lam * (2 * W**3 - 3 * W**2 + W)
-    grad_H = -2 * (E.T @ W) + lam * (2 * H**3 - 3 * H**2 + H)
+    E = Y - W @ H
+    grad_W = -2 * (E @ H.T) + lam * (2 * W**3 - 3 * W**2 + W)
+    grad_H = -2 * (E.T @ W) + lam * (2 * H.T**3 - 3 * H.T**2 + H.T)
     grad_Y = 2 * E
 
     w_cond_1 = (grad_W[W <= tau2] >= -tau1).all()
@@ -111,8 +69,8 @@ def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
     if not (w_cond_1 and w_cond_2):
         return False
 
-    h_cond_1 = (grad_H[H <= tau2] >= -tau1).all()
-    h_cond_2 = (np.abs(grad_H[H > tau2]) <= tau1).all()
+    h_cond_1 = (grad_H[H.T <= tau2] >= -tau1).all()
+    h_cond_2 = (np.abs(grad_H[H.T > tau2]) <= tau1).all()
     if not (h_cond_1 and h_cond_2):
         return False
 
@@ -135,99 +93,43 @@ def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
 
 
 def cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2):
-    i = 0
-    previous = np.inf
+    # previous = np.inf
     while not check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
 
         W, H, Y = update_w_h_y(X, W, H, Y, lam, delta)
-        
-        if full_objective(Y, W, H, lam) > previous:
-            print("increase :(")
-            break
-        
-        previous = full_objective(Y, W, H, lam)
-        print("distance=", previous)
-        i += 1
-    print("iterations:",i)
-
-
-def booleanization(
-    X: np.ndarray, W: np.ndarray, H: np.ndarray, npoints: int
-) -> Tuple[np.ndarray, np.ndarray]:
-    W_p = np.linspace(np.min(W), np.max(W), npoints)
-    H_p = np.linspace(np.min(H), np.max(H), npoints)
-
-    argmin_W, argmin_H, _ = min(
-        (
-            (
-                delta_W,
-                delta_H,
-                boolean_distance(X, ((W > delta_W) @ (H > delta_H).T).astype(bool)),
-            )
-            for delta_W in W_p
-            for delta_H in H_p
-        ),
-        key=lambda t: t[2],
-    )
-
-    W_prime = W > argmin_W
-    H_prime = H > argmin_H
-
-    return W_prime, H_prime
-
-
-def convergence(X, Y, W, H, lamb, del1, del2):
-    N, M = X.shape
-    K = W.shape[1]
-    conv = 1
-    gradf_W = 2 * np.dot(np.dot(W, H.T) - Y, H) + lamb * np.multiply(
-        W**2 - W, 2 * W - np.ones((N, K))
-    )
-    gradf_H = 2 * np.dot(np.dot(H, W.T) - Y.T, W) + lamb * np.multiply(
-        H**2 - H, 2 * H - np.ones((M, K))
-    )
-    gradf_Y = 2 * (Y - np.dot(W, H.T))
-
-    if np.any(gradf_W < -del1):
-        conv = 0
-    elif np.any(gradf_W[W > del2] > del1):
-        conv = 0
-    elif np.any(gradf_H < -del1):
-        conv = 0
-    elif np.any(gradf_H[H > del2] > del1):
-        conv = 0
-    elif np.any(gradf_Y[(Y < K - del2) & (X == 1)] < -del1):
-        conv = 0
-    elif np.any(gradf_Y[(Y > 1 + del2) & (X == 1)] > del1):
-        conv = 0
-
-    return conv
 
 
 def cardano_bmf(X, k, lam, delta, tau1, tau2, L) -> Tuple[np.ndarray, np.ndarray]:
 
-    Y, W, H = banmf_initialization(X, k)
-
+    Y, W, H = random_initialization_Y_W_H(X, k)
     cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2)
 
     W, H = booleanization(X, W, H, L)
 
-    print(boolean_distance(X,W@H.T))
+    print("cardano before local search:",boolean_distance(X,W@H))
 
+    W, H = local_search(X, W, H, k)
+
+    print("cardano after local search:",boolean_distance(X,W@H))
     return W, H
 
 
 if __name__ == "__main__":
 
-    X = (np.random.rand(50, 50) > 0.5).astype(bool)
-    k = 25
-    lam = 1
-    delta = 0.501
-    tau1 = 0.005
-    tau2 = 0.001
-    booleanization_points = 25
+    np.random.seed(42)
+    #X = (np.random.rand(5, 5) > 0.5).astype(bool)
+    X = np.random.randint(0,2,(40,40))
+    k =     4
+    lam = 2
+    delta = 0.51
+    tau1 = 0.07
+    tau2 = 0.07
+    booleanization_points = 20
 
+    print("z")
     W, H = cardano_bmf(X, k, lam, delta, tau1, tau2, booleanization_points)
 
     print(W)
     print(H)
+
+    print("disantce : ",boolean_distance(X,W@H))
