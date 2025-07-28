@@ -4,8 +4,8 @@ from algorithms.utils import *
 
 
 def solve_cardano(p, q):
-    delta = (q / 2) ** 2 + (p / 3) ** 3
-    sqrt_delta = np.sqrt(delta)
+    delta_ = (q / 2) ** 2 + (p / 3) ** 3
+    sqrt_delta = np.sqrt(delta_)
     u = np.cbrt(-q / 2 + sqrt_delta)
     v = np.cbrt(-q / 2 - sqrt_delta)
     return u + v
@@ -52,6 +52,7 @@ def update_w_h_y(X, W, H, Y, lam, delta):
 
     WH = W @ H
     Y[X] = np.clip(WH[X], 1, K)
+    print(obj_func(Y,W,H.T,lam))
 
     return W, H, Y
 
@@ -60,6 +61,7 @@ def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
     M, K = W.shape
 
     E = Y - W @ H
+
     grad_W = -2 * (E @ H.T) + lam * (2 * W**3 - 3 * W**2 + W)
     grad_H = -2 * (E.T @ W) + lam * (2 * H.T**3 - 3 * H.T**2 + H.T)
     grad_Y = 2 * E
@@ -93,10 +95,12 @@ def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
 
 
 def cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2):
-    # previous = np.inf
+    n_iter = 0
     while not check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
 
+        n_iter += 1
         W, H, Y = update_w_h_y(X, W, H, Y, lam, delta)
+    print(n_iter)
 
 
 def cardano_bmf(X, k, lam, delta, tau1, tau2, L) -> Tuple[np.ndarray, np.ndarray]:
@@ -106,30 +110,46 @@ def cardano_bmf(X, k, lam, delta, tau1, tau2, L) -> Tuple[np.ndarray, np.ndarray
 
     W, H = booleanization(X, W, H, L)
 
-    print("cardano before local search:",boolean_distance(X,W@H))
+    print("cardano before local search:", boolean_distance(X, W @ H))
 
     W, H = local_search(X, W, H, k)
 
-    print("cardano after local search:",boolean_distance(X,W@H))
+    print("cardano after local search:", boolean_distance(X, W @ H))
     return W, H
 
+def obj_func(Y, W, H, _lamb):
+    obj_func_val = np.linalg.norm(Y - np.dot(W, H.T)) ** 2 + 0.5 * _lamb * (
+        np.linalg.norm(W**2 - W) ** 2 + np.linalg.norm(H**2 - H) ** 2
+    )
+    return obj_func_val
 
 if __name__ == "__main__":
 
-    np.random.seed(42)
-    #X = (np.random.rand(5, 5) > 0.5).astype(bool)
-    X = np.random.randint(0,2,(40,40))
-    k =     4
-    lam = 2
+    #np.random.seed(42)
+    # X = (np.random.rand(5, 5) > 0.5).astype(bool)
+    # X = np.random.randint(0, 2, (40, 40))
+    filename = "../data/zoo.data"
+
+    with open(filename, "r") as fichier:
+        X = []
+        for line in fichier:
+            parts = line.strip().split(",")[1:]  # Skip animal name
+            filtered = [int(x) for i, x in enumerate(parts) if i not in ( 13, 17)] # need to skip some columns that have non boolean value
+            bool_values = [val > 0 for val in filtered] 
+            X.append(bool_values)
+    X = np.array(X, dtype=bool)
+
+
+    k = 4
+    lam = 1.0
     delta = 0.51
-    tau1 = 0.07
-    tau2 = 0.07
+    tau1 = 0.005
+    tau2 = 0.001
     booleanization_points = 20
 
-    print("z")
     W, H = cardano_bmf(X, k, lam, delta, tau1, tau2, booleanization_points)
 
-    print(W)
-    print(H)
+    #print(W)
+    #print(H)
 
-    print("disantce : ",boolean_distance(X,W@H))
+    print("disantce : ", boolean_distance(X, W @ H))

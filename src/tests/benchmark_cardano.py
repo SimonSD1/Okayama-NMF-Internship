@@ -2,7 +2,7 @@ from algorithms.utils import *
 import time
 import matplotlib.pyplot as plt
 
-from algorithms.cardano import cardano_bmf
+from algorithms.cardano import *
 from algorithms.banmf import *
 
 from typing import Tuple, Dict, Any
@@ -74,6 +74,20 @@ def find_params_cardano(
 
     return best_params
 
+def get_zoo_dataset_matrix():
+
+    filename = "../data/zoo.data"
+
+    with open(filename, "r") as f:
+        X = []
+        for line in f:
+            parts = line.strip().split(",")[1:]  # Skip animal name
+            filtered = [int(x) for i, x in enumerate(parts) if i not in ( 13, 17)] # need to skip some columns that have non boolean value
+            bool_values = [val > 0 for val in filtered] 
+            X.append(bool_values)
+    X = np.array(X, dtype=bool)
+
+    return X
 
 def compare_cardano_banmf(
     X: np.ndarray,
@@ -82,6 +96,7 @@ def compare_cardano_banmf(
     niter_banmf: int,
     booleanization_points: int,
     num_trials: int,
+    filename : str
 ):
     cardano_distances = []
     banmf_distances = []
@@ -145,24 +160,25 @@ def compare_cardano_banmf(
             ha='center', va='bottom',
             fontsize=9, color='gray'
         )
-    plt.savefig("../results/cardano_vs_banmf.png")
+    plt.savefig(f"../results/{filename}.png")
     plt.close()
 
 
 if __name__ == "__main__":
-    DIMENSION = (20, 20)
-    X = (np.random.rand(*DIMENSION) > 0.5).astype(bool)
-    K = 10
+    #DIMENSION = (20, 20)
+    #X = (np.random.rand(*DIMENSION) > 0.5).astype(bool)
+    X = get_zoo_dataset_matrix()
+    K = 4
     BOOLEANIZATION_POINTS = 30
     NUM_TRIALS = 20
 
     # for 20 by 20
     # best_params=  {'lam': np.float64(0.0112), 'delta': np.float64(1.7591919191919192), 'tau1': 0.001, 'tau2': 0.001}
-    best_params=  {'lam': np.float64(0.1), 'delta': np.float64(0.501), 'tau1': 0.005, 'tau2': 0.001}
+    best_params=  {'lam': np.float64(1), 'delta': np.float64(0.501), 'tau1': 0.005, 'tau2': 0.001}
     #best_params = {'lam': np.float64(0.1), 'delta': np.float64(0.501), 'tau1': 0.007, 'tau2': 0.007}
     #best_params={'lam': np.float64(0.10213877551020409), 'delta': np.float64(6.126530612244897), 'tau1': 0.5, 'tau2': 0.1}
     #best_params = find_params_cardano(X, K, BOOLEANIZATION_POINTS, NUM_TRIALS)
 
     print("best params: ", best_params)
 
-    compare_cardano_banmf(X, K, best_params, 1500, BOOLEANIZATION_POINTS, NUM_TRIALS)
+    compare_cardano_banmf(X, K, best_params, 1500, BOOLEANIZATION_POINTS, NUM_TRIALS,"zoo")
