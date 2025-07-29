@@ -8,10 +8,12 @@ from algorithms.banmf import *
 from typing import Tuple, Dict, Any
 
 import time
+import csv
+import os
 
 
 def find_params_cardano(
-    X: np.ndarray, k: int, booleanization_points: int, num_trials: int
+    X: np.ndarray, k: int, booleanization_points: int, num_trials: int, max_iter: int
 ) -> Dict[str, Any]:
 
     # start, end, nb points
@@ -34,13 +36,7 @@ def find_params_cardano(
                 boolean_distance_factors(
                     X,
                     *cardano_bmf(
-                        X,
-                        k,
-                        lam,
-                        delta,
-                        tau1,
-                        tau2,
-                        booleanization_points,
+                        X, k, lam, delta, tau1, tau2, booleanization_points, max_iter
                     ),
                 )
                 for _ in range(num_trials)
@@ -74,6 +70,7 @@ def find_params_cardano(
 
     return best_params
 
+
 def get_zoo_dataset_matrix():
 
     filename = "../data/zoo.data"
@@ -82,12 +79,77 @@ def get_zoo_dataset_matrix():
         X = []
         for line in f:
             parts = line.strip().split(",")[1:]  # Skip animal name
-            filtered = [int(x) for i, x in enumerate(parts) if i not in ( 13, 17)] # need to skip some columns that have non boolean value
-            bool_values = [val > 0 for val in filtered] 
+            filtered = [
+                int(x) for i, x in enumerate(parts) if i not in (13, 17)
+            ]  # need to skip some columns that have non boolean value
+            bool_values = [val > 0 for val in filtered]
             X.append(bool_values)
     X = np.array(X, dtype=bool)
 
     return X
+
+
+def get_lucap0_dataset_matrix():
+    X = []
+
+    filename = "../data/lucap0_train.data"
+
+    with open(filename, "r") as f:
+        for line in f:
+            parts = line.strip().split(" ")
+            int_parts = [int(x) for x in parts]
+            X.append(int_parts)
+
+    print(X)
+
+    X = np.array(X, dtype=bool)
+    # print(X.astype(bool))
+    return X
+
+
+def plot_comparison_from_csv(filename: str):
+    csv_path = f"../results/csv_results/{filename}.csv"
+    image_path = f"../results/{filename}.png"
+
+    algos = []
+    means = []
+    stds = []
+    times = []
+
+    with open(csv_path, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            algos.append(row["Algorithm"])
+            means.append(float(row["Mean"]))
+            stds.append(float(row["Std"]))
+            times.append(float(row["Time"]))
+
+    plt.figure()
+    bars = plt.bar(algos, means, yerr=stds)
+    plt.ylabel("Average boolean distance")
+    plt.title("Algorithms comparison on zoo dataset, k=12, lambda=0.1")
+    plt.bar_label(bars)
+
+    plt.subplots_adjust(bottom=0.2)
+
+    for bar, t in zip(bars, times):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            -max(means) * 0.1,  
+            f"mean time: {t:.2f}s",
+            ha="center",
+            va="top",
+            fontsize=7,
+            color="steelblue",
+            rotation=0,
+            fontweight="medium"
+        )
+
+
+    os.makedirs("../results", exist_ok=True)
+    plt.savefig(image_path)
+    plt.close()
+
 
 def compare_cardano_banmf(
     X: np.ndarray,
@@ -96,23 +158,24 @@ def compare_cardano_banmf(
     niter_banmf: int,
     booleanization_points: int,
     num_trials: int,
-    filename : str
+    max_iter: int,
+    filename: str,
 ):
     cardano_distances = []
     banmf_distances = []
-    rand_distances=[]
-    regularized_banmf_distances=[]
+    rand_distances = []
+    regularized_banmf_distances = []
 
     cardano_times = []
     banmf_times = []
-    rand_times=[]
-    regularized_banmf_times=[]
+    rand_times = []
+    regularized_banmf_times = []
 
     for _ in range(num_trials):
 
         start = time.time()
         W_cardano, H_cardano = cardano_bmf(
-            X, k, **cardano_params, L=booleanization_points
+            X, k, **cardano_params, L=booleanization_points, max_iter=max_iter
         )
         cardano_times.append(time.time() - start)
 
@@ -121,64 +184,84 @@ def compare_cardano_banmf(
         banmf_times.append(time.time() - start)
 
         start = time.time()
-        W_rand, H_rand = random_plus_local_search(X, k, 1500)
+        W_rand, H_rand = random_plus_local_search(X, k, max_iter)
         rand_times.append(time.time() - start)
 
         start = time.time()
-        W_reg, H_reg = regularized_banmf_local_search(X, k, 1500,30,0.1)
+        W_reg, H_reg = regularized_banmf_local_search(
+            X, k, max_iter, booleanization_points, 0.1
+        )
         regularized_banmf_times.append(time.time() - start)
 
         cardano_distances.append(boolean_distance(X, W_cardano @ H_cardano))
         banmf_distances.append(boolean_distance(X, W_banmf @ H_banmf))
         rand_distances.append(boolean_distance(X, W_rand @ H_rand))
-        regularized_banmf_distances.append(boolean_distance(X,W_reg@H_reg))
+        regularized_banmf_distances.append(boolean_distance(X, W_reg @ H_reg))
 
     cardano_mean = np.mean(cardano_distances)
     cardano_std = np.std(cardano_distances)
     rand_std = np.std(rand_distances)
-    regularized_banmf_std=np.std(regularized_banmf_distances)
+    regularized_banmf_std = np.std(regularized_banmf_distances)
     banmf_mean = np.mean(banmf_distances)
     banmf_std = np.std(banmf_distances)
     rand_mean = np.mean(rand_distances)
-    regularized_banmf_mean=np.mean(regularized_banmf_distances)
+    regularized_banmf_mean = np.mean(regularized_banmf_distances)
     plt.figure()
-    algos = ["Cardano BMF", "BANMF","Rand+localsearch","regularized banmf"]
-    means = [cardano_mean, banmf_mean,rand_mean,regularized_banmf_mean]
-    stds = [cardano_std, banmf_std,rand_std,regularized_banmf_std]
-    times=[np.mean(cardano_times),np.mean(banmf_times),np.mean(rand_times),np.mean(regularized_banmf_times)]
+    algos = ["Cardano BMF", "BANMF", "Rand+localsearch", "regularized banmf"]
+    means = [cardano_mean, banmf_mean, rand_mean, regularized_banmf_mean]
+    stds = [cardano_std, banmf_std, rand_std, regularized_banmf_std]
+    times = [
+        np.mean(cardano_times),
+        np.mean(banmf_times),
+        np.mean(rand_times),
+        np.mean(regularized_banmf_times),
+    ]
 
-    bars = plt.bar(algos, means, yerr=stds)
-    plt.ylabel("Average distance")
-    plt.title("cardano vs banmf")
-    plt.bar_label(bars)
-    for bar, t in zip(bars, times):
-        height = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width()/2,
-            height,  # un peu au-dessus de l'erreur
-            f"Mean time: {t:.2f}s",
-            ha='center', va='bottom',
-            fontsize=9, color='gray'
-        )
-    plt.savefig(f"../results/{filename}.png")
-    plt.close()
+    os.makedirs("../results/csv_results", exist_ok=True)
+    with open(f"../results/csv_results/{filename}.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Algorithm", "Mean", "Std", "Time"])
+        for algo, mean, std, t in zip(algos, means, stds, times):
+            writer.writerow([algo, mean, std, t])
+
+    plot_comparison_from_csv(filename)
 
 
 if __name__ == "__main__":
-    #DIMENSION = (20, 20)
-    #X = (np.random.rand(*DIMENSION) > 0.5).astype(bool)
-    X = get_zoo_dataset_matrix()
-    K = 4
+    # DIMENSION = (20, 20)
+    # X = (np.random.rand(*DIMENSION) > 0.5).astype(bool)
+    # X = get_zoo_dataset_matrix()
+    X = get_lucap0_dataset_matrix()
+    print(X)
+    K = 100
     BOOLEANIZATION_POINTS = 30
-    NUM_TRIALS = 20
+    NUM_TRIALS = 5
 
     # for 20 by 20
     # best_params=  {'lam': np.float64(0.0112), 'delta': np.float64(1.7591919191919192), 'tau1': 0.001, 'tau2': 0.001}
-    best_params=  {'lam': np.float64(1), 'delta': np.float64(0.501), 'tau1': 0.005, 'tau2': 0.001}
-    #best_params = {'lam': np.float64(0.1), 'delta': np.float64(0.501), 'tau1': 0.007, 'tau2': 0.007}
-    #best_params={'lam': np.float64(0.10213877551020409), 'delta': np.float64(6.126530612244897), 'tau1': 0.5, 'tau2': 0.1}
-    #best_params = find_params_cardano(X, K, BOOLEANIZATION_POINTS, NUM_TRIALS)
+    best_params = {
+        "lam": np.float64(0.1),
+        "delta": np.float64(0.501),
+        "tau1": 0.005,
+        "tau2": 0.001,
+    }
+    # best_params = {'lam': np.float64(0.1), 'delta': np.float64(0.501), 'tau1': 0.007, 'tau2': 0.007}
+    # best_params={'lam': np.float64(0.10213877551020409), 'delta': np.float64(6.126530612244897), 'tau1': 0.5, 'tau2': 0.1}
+    # best_params = find_params_cardano(X, K, BOOLEANIZATION_POINTS, NUM_TRIALS)
 
     print("best params: ", best_params)
 
-    compare_cardano_banmf(X, K, best_params, 1500, BOOLEANIZATION_POINTS, NUM_TRIALS,"zoo")
+    max_iter = 500
+
+    # compare_cardano_banmf(
+    #    X,
+    #    K,
+    #    best_params,
+    #    max_iter,
+    #    BOOLEANIZATION_POINTS,
+    #    NUM_TRIALS,
+    #    max_iter=max_iter,
+    #    filename="lucap_k=100_lam=0_1",
+    # )
+
+    plot_comparison_from_csv("zoo_k=12_lam=0_1")

@@ -52,7 +52,7 @@ def update_w_h_y(X, W, H, Y, lam, delta):
 
     WH = W @ H
     Y[X] = np.clip(WH[X], 1, K)
-    print(obj_func(Y,W,H.T,lam))
+    # print(obj_func(Y,W,H.T,lam))
 
     return W, H, Y
 
@@ -94,38 +94,38 @@ def check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
     return True
 
 
-def cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2):
+def cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2, max_iter):
     n_iter = 0
-    while not check_stopping_condition(X, W, H, Y, lam, tau1, tau2):
+    while (
+        not check_stopping_condition(X, W, H, Y, lam, tau1, tau2)
+    ) and n_iter < max_iter:
 
         n_iter += 1
         W, H, Y = update_w_h_y(X, W, H, Y, lam, delta)
     print(n_iter)
 
 
-def cardano_bmf(X, k, lam, delta, tau1, tau2, L) -> Tuple[np.ndarray, np.ndarray]:
+def cardano_bmf(
+    X, k, lam, delta, tau1, tau2, L, max_iter
+) -> Tuple[np.ndarray, np.ndarray]:
 
     Y, W, H = random_initialization_Y_W_H(X, k)
-    cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2)
-
+    cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2, max_iter)
+    print(
+        "cardano before local search:",
+        boolean_distance(X, W @ H),
+        obj_func(Y, W, H, lam),
+    )
     W, H = booleanization(X, W, H, L)
-
-    print("cardano before local search:", boolean_distance(X, W @ H))
 
     W, H = local_search(X, W, H, k)
 
-    print("cardano after local search:", boolean_distance(X, W @ H))
     return W, H
 
-def obj_func(Y, W, H, _lamb):
-    obj_func_val = np.linalg.norm(Y - np.dot(W, H.T)) ** 2 + 0.5 * _lamb * (
-        np.linalg.norm(W**2 - W) ** 2 + np.linalg.norm(H**2 - H) ** 2
-    )
-    return obj_func_val
 
 if __name__ == "__main__":
 
-    #np.random.seed(42)
+    # np.random.seed(42)
     # X = (np.random.rand(5, 5) > 0.5).astype(bool)
     # X = np.random.randint(0, 2, (40, 40))
     filename = "../data/zoo.data"
@@ -134,11 +134,12 @@ if __name__ == "__main__":
         X = []
         for line in fichier:
             parts = line.strip().split(",")[1:]  # Skip animal name
-            filtered = [int(x) for i, x in enumerate(parts) if i not in ( 13, 17)] # need to skip some columns that have non boolean value
-            bool_values = [val > 0 for val in filtered] 
+            filtered = [
+                int(x) for i, x in enumerate(parts) if i not in (13, 17)
+            ]  # need to skip some columns that have non boolean value
+            bool_values = [val > 0 for val in filtered]
             X.append(bool_values)
     X = np.array(X, dtype=bool)
-
 
     k = 4
     lam = 1.0
@@ -146,10 +147,11 @@ if __name__ == "__main__":
     tau1 = 0.005
     tau2 = 0.001
     booleanization_points = 20
+    max_iter = 1000
 
-    W, H = cardano_bmf(X, k, lam, delta, tau1, tau2, booleanization_points)
+    W, H = cardano_bmf(X, k, lam, delta, tau1, tau2, booleanization_points, max_iter)
 
-    #print(W)
-    #print(H)
+    # print(W)
+    # print(H)
 
     print("disantce : ", boolean_distance(X, W @ H))

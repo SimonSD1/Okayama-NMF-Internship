@@ -138,9 +138,9 @@ def regularized_banmf_local_search(X,k,Niter,nb_points,lam):
     W, H = regularized_banmf_auxiliary_solve(X, Y, W, H, k, Niter, lam)
 
     W, H = booleanization(X, W, H, nb_points)
-    print("banmf before local search:",boolean_distance(X,W@H))
+    print("banmf before local search:",boolean_distance(X,W@H),obj_func(Y,W,H,lam))
     W, H = local_search(X, W, H, k)
-    print("banmf after local search:",boolean_distance(X,W@H))
+    print("banmf after local search:",boolean_distance(X,W@H),obj_func(Y,W,H,lam))
 
     return W, H
 

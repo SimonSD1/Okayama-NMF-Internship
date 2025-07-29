@@ -10,6 +10,18 @@ def boolean_distance(A: np.ndarray, B: np.ndarray) -> int:
     return np.sum(A != B)
 
 
+def obj_func(Y, W, H, lam):
+    # Compute the Frobenius norm term: ||Y - W @ H.T||_F^2
+    reconstruction_error = np.linalg.norm(Y - W @ H, "fro") ** 2
+
+    # Regularization terms
+    reg_W = lam * 0.5 * np.sum((W**2 - W) ** 2)
+    reg_H = lam * 0.5 * np.sum((H**2 - H) ** 2)
+
+    # Final objective function value
+    return reconstruction_error + reg_W + reg_H
+
+
 def boolean_distance_factors(A: np.ndarray, W: np.ndarray, H: np.ndarray):
     return np.sum(A != W @ H)
 
@@ -30,7 +42,7 @@ def random_initialization_Y_W_H(
 
     # Initialization
     Y = X.copy().astype(float)
-    W = np.random.rand(n, k) 
+    W = np.random.rand(n, k)
     H = np.random.rand(k, m)
 
     return Y, W, H
