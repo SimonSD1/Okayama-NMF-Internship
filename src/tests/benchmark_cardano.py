@@ -162,17 +162,18 @@ def compare_cardano_banmf(
     filename: str,
 ):
     cardano_local_search_distances = []
+    cardano_distances=[]
     banmf_local_search_distances = []
     rand_distances = []
     regularized_banmf_local_search_distances = []
-    cardano_distances=[]
     regularized_banmf_distances=[]
 
+
     cardano_local_search_times = []
+    cardano_times=[]
     banmf_local_search_times = []
     rand_times = []
     regularized_banmf_local_search_times = []
-    cardano_times=[]
     regularized_banmf_times=[]
 
     for _ in range(num_trials):
