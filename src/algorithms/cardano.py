@@ -105,20 +105,28 @@ def cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2, max_iter):
     print(n_iter)
 
 
+def cardano_bmf_local_search(
+    X, k, lam, delta, tau1, tau2, L, max_iter
+) -> Tuple[np.ndarray, np.ndarray]:
+
+    Y, W, H = random_initialization_Y_W_H(X, k)
+    cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2, max_iter)
+
+    W, H = booleanization(X, W, H, L)
+
+    W, H = local_search(X, W, H, k)
+
+    return W, H
+
+
 def cardano_bmf(
     X, k, lam, delta, tau1, tau2, L, max_iter
 ) -> Tuple[np.ndarray, np.ndarray]:
 
     Y, W, H = random_initialization_Y_W_H(X, k)
     cardano_solve_aux(X, W, H, Y, lam, delta, tau1, tau2, max_iter)
-    print(
-        "cardano before local search:",
-        boolean_distance(X, W @ H),
-        obj_func(Y, W, H, lam),
-    )
-    W, H = booleanization(X, W, H, L)
 
-    W, H = local_search(X, W, H, k)
+    W, H = booleanization(X, W, H, L)
 
     return W, H
 

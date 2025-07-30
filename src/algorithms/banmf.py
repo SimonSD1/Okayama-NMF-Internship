@@ -83,8 +83,6 @@ def banmf_auxiliary_solve(
     return W, H
 
 
-
-
 def banmf(
     X: np.ndarray, k: int, Niter: int, nb_points: int
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -107,63 +105,75 @@ def banmf_local_search(
     W, H = banmf_auxiliary_solve(X, Y, W, H, k, Niter)
 
     W, H = booleanization(X, W, H, nb_points)
-    #print("banmf before local search:",boolean_distance(X,W@H))
+    # print("banmf before local search:",boolean_distance(X,W@H))
     W, H = local_search(X, W, H, k)
-    #print("banmf after local search:",boolean_distance(X,W@H))
+    # print("banmf after local search:",boolean_distance(X,W@H))
 
     return W, H
 
-def regularized_banmf_auxiliary_solve(X,Y,W,H,k,Niter,lam):
+
+def regularized_banmf_auxiliary_solve(X, Y, W, H, k, Niter, lam):
     for _ in range(Niter):
         WHHT = W @ H @ H.T
         YHT = Y @ H.T
-        W_sq = W ** 2
-        W_cub = W ** 3
+        W_sq = W**2
+        W_cub = W**3
         W = W * (YHT + 3 * lam * W_sq) / (WHHT + 2 * lam * W_cub + lam * W_sq + epsilon)
 
         WTWH = W.T @ W @ H
         WTY = W.T @ Y
-        H_sq = H ** 2
-        H_cub = H ** 3
+        H_sq = H**2
+        H_cub = H**3
         H = H * (WTY + 3 * lam * H_sq) / (WTWH + 2 * lam * H_cub + lam * H_sq + epsilon)
 
         WH = W @ H
         Y[X] = np.clip(WH[X], 1, k)
 
-    return W,H
+    return W, H
 
-def regularized_banmf_local_search(X,k,Niter,nb_points,lam):
+
+def regularized_banmf_local_search(X, k, Niter, nb_points, lam):
     Y, W, H = random_initialization_Y_W_H(X, k)
 
     W, H = regularized_banmf_auxiliary_solve(X, Y, W, H, k, Niter, lam)
 
     W, H = booleanization(X, W, H, nb_points)
-    print("banmf before local search:",boolean_distance(X,W@H),obj_func(Y,W,H,lam))
+
     W, H = local_search(X, W, H, k)
-    print("banmf after local search:",boolean_distance(X,W@H),obj_func(Y,W,H,lam))
 
     return W, H
 
 
+def regularized_banmf(X, k, Niter, nb_points, lam):
+    Y, W, H = random_initialization_Y_W_H(X, k)
 
-def random_plus_local_search(X:np.ndarray,k:int, num_trials:int)->Tuple[np.ndarray,np.ndarray]:
-    n,m=X.shape
-    lowest=1000000000000000000000000000000000
-    best_W=(np.random.rand(n,k)>0.5).astype(bool)
-    best_H=(np.random.rand(k,m)>0.5).astype(bool)
+    W, H = regularized_banmf_auxiliary_solve(X, Y, W, H, k, Niter, lam)
+
+    W, H = booleanization(X, W, H, nb_points)
+
+    return W, H
+
+
+def random_plus_local_search(
+    X: np.ndarray, k: int, num_trials: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    n, m = X.shape
+    lowest = 1000000000000000000000000000000000
+    best_W = (np.random.rand(n, k) > 0.5).astype(bool)
+    best_H = (np.random.rand(k, m) > 0.5).astype(bool)
     for _ in range(num_trials):
 
-        W=(np.random.rand(n,k)>0.5).astype(bool)
-        H=(np.random.rand(k,m)>0.5).astype(bool)
+        W = (np.random.rand(n, k) > 0.5).astype(bool)
+        H = (np.random.rand(k, m) > 0.5).astype(bool)
 
-        if boolean_distance(X,W@H) < lowest:
-            lowest=boolean_distance(X,W@H)
-            best_W=W
-            best_H=H
-    
-    W,H=local_search(X,best_W,best_H,k)
+        if boolean_distance(X, W @ H) < lowest:
+            lowest = boolean_distance(X, W @ H)
+            best_W = W
+            best_H = H
 
-    return W,H
+    W, H = local_search(X, best_W, best_H, k)
+
+    return W, H
 
 
 def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -201,6 +211,3 @@ def brute_force(X: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
                 lowest = distance
 
     return best_W, best_H
-
-
-
